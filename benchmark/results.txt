@@ -1,0 +1,11 @@
+Benchmarking on 3000 documents
+
+Each method ran 160 queries (8 distinct terms x 20 repeats)
+
+1. Linear scan (no index):         315.999 ms total, 1974.99 us/query
+2. Hash lookup (index, no rank):    0.004 ms total, 0.025 us/query
+3. Inverted index + TF-IDF + top-K: 2.05 ms total, 12.8125 us/query
+4. Inverted index + LRU cache:       0.112 ms total, 0.7 us/query
+
+Speedup, linear scan -> ranked search: 154.146x
+Speedup, ranked search -> cached:      18.3036x
