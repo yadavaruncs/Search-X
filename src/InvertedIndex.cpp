@@ -33,6 +33,10 @@ void InvertedIndex::merge(std::unordered_map<std::string, PostingList>&& partial
 
 void InvertedIndex::build(const std::vector<Document>& docs, unsigned numThreads) {
     documents_ = docs;
+    idToIndex_.clear();
+    for (size_t i = 0; i < documents_.size(); ++i) {
+        idToIndex_[documents_[i].id] = i;
+    }
     index_.clear();
 
     numThreads = std::max(1u, numThreads);
