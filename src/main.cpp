@@ -1,7 +1,7 @@
 #include <chrono>
-#include <fstream>
 #include <iostream>
 #include <thread>
+#include "DocumentLoader.h"
 #include "InvertedIndex.h"
 #include "LRUCache.h"
 #include "Ranker.h"
@@ -11,19 +11,6 @@
 
 using namespace searchx;
 using Clock = std::chrono::steady_clock;
-
-static std::vector<Document> loadDocuments(const std::string& path) {
-    std::ifstream file(path);
-    std::vector<Document> docs;
-    std::string line;
-    int id = 0;
-    while (std::getline(file, line)) {
-        if (!line.empty()) {
-            docs.push_back({id++, line});
-        }
-    }
-    return docs;
-}
 
 static void printResults(const InvertedIndex& index, const std::vector<ScoredDoc>& results, size_t limit) {
     if (results.empty()) {

@@ -13,6 +13,7 @@ include_directories(include)
 
 # Core engine as a library so both the CLI and the benchmark can link it.
 add_library(searchx_core
+    src/DocumentLoader.cpp
     src/Tokenizer.cpp
     src/InvertedIndex.cpp
     src/Ranker.cpp
@@ -32,3 +33,5 @@ target_link_libraries(benchmark PRIVATE searchx_core)
 
 add_executable(smoke_test tests/smoke_test.cpp)
 target_link_libraries(smoke_test PRIVATE searchx_core)
+# The missing-file test runs these binaries, so they must never be stale.
+add_dependencies(smoke_test searchx benchmark)

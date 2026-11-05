@@ -24,12 +24,14 @@ public:
     const PostingList* getPostings(const std::string& term) const;
     int documentFrequency(const std::string& term) const; // # of docs containing term
     int documentCount() const { return static_cast<int>(documents_.size()); }
-    const Document& getDocument(int id) const { return documents_.at(id); }
+    // Throws std::out_of_range if no document has this id.
+    const Document& getDocument(int id) const { return documents_[idToIndex_.at(id)]; }
     const std::vector<Document>& documents() const { return documents_; }
     std::vector<std::string> vocabulary() const;
 
 private:
     std::vector<Document> documents_;
+    std::unordered_map<int, size_t> idToIndex_; // doc id -> position in documents_
     std::unordered_map<std::string, PostingList> index_;
 
     static std::unordered_map<std::string, PostingList> buildPartial(

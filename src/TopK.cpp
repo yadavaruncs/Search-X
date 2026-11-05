@@ -5,6 +5,8 @@
 namespace searchx {
 
 std::vector<ScoredDoc> TopK::select(const std::vector<ScoredDoc>& scored, size_t k) {
+    if (k == 0) return {};
+
     // Min-heap capped at size k: the smallest of the "current best k" sits
     // on top, ready to be evicted the moment something bigger shows up.
     auto byScoreAscending = [](const ScoredDoc& a, const ScoredDoc& b) {

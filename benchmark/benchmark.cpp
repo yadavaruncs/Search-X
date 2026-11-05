@@ -5,9 +5,9 @@
 //   3. Inverted+TF-IDF-- full ranked search (index lookup + score + top-K). O(matches * log k)
 //   4. Inverted+cache -- same ranked search, but repeat queries hit the LRU cache. O(1) on a hit
 #include <chrono>
-#include <fstream>
 #include <iostream>
 #include <vector>
+#include "DocumentLoader.h"
 #include "InvertedIndex.h"
 #include "LRUCache.h"
 #include "Ranker.h"
@@ -16,17 +16,6 @@
 
 using namespace searchx;
 using Clock = std::chrono::steady_clock;
-
-static std::vector<Document> loadDocuments(const std::string& path) {
-    std::ifstream file(path);
-    std::vector<Document> docs;
-    std::string line;
-    int id = 0;
-    while (std::getline(file, line)) {
-        if (!line.empty()) docs.push_back({id++, line});
-    }
-    return docs;
-}
 
 static double elapsedMs(Clock::time_point a, Clock::time_point b) {
     return std::chrono::duration_cast<std::chrono::microseconds>(b - a).count() / 1000.0;

@@ -1,7 +1,12 @@
 // Plain assert()-based sanity checks for each core component -- no test
 // framework, just enough to catch a broken build before it hits a demo.
 #include <cassert>
+#include <cstdlib>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
+#include <stdexcept>
+#include <string>
 #include "InvertedIndex.h"
 #include "LRUCache.h"
 #include "Ranker.h"
@@ -36,6 +41,20 @@ static void testInvertedIndex() {
     assert(sat->at(0) == 1);            // once in doc 0
     assert(index.getPostings("xyz") == nullptr); // absent term
     assert(index.documentFrequency("the") == 2);
+
+    // ids are labels, not positions
+    InvertedIndex sparse;
+    sparse.build({{100, "first"}, {7, "second"}});
+    assert(sparse.getDocument(100).text == "first");
+    assert(sparse.getDocument(7).text == "second");
+
+    bool threw = false;
+    try {
+        sparse.getDocument(0); // valid position, but no document has this id
+    } catch (const std::out_of_range&) {
+        threw = true;
+    }
+    assert(threw);
     std::cout << "  InvertedIndex: OK\n";
 }
 
@@ -55,6 +74,7 @@ static void testRankerAndTopK() {
     auto top = TopK::select(scored, 1);
     assert(top.size() == 1);
     assert(top[0].docId == 0); // doc 0 mentions "cache" more -> higher TF-IDF
+    assert(TopK::select(scored, 0).empty());
     std::cout << "  Ranker + TopK: OK\n";
 }
 
@@ -83,16 +103,50 @@ static void testLRUCache() {
     assert(!cache.get("a", out)); // evicted
     assert(cache.get("b", out) && out[0].docId == 2);
     assert(cache.get("c", out) && out[0].docId == 3);
+
+    LRUCache disabled(0);
+    disabled.put("a", a);
+    assert(!disabled.get("a", out));
     std::cout << "  LRUCache: OK\n";
 }
 
-int main() {
+// loadDocuments is private to main.cpp and benchmark.cpp, so run the real
+// binaries from the build directory, which has no data/docs.txt.
+static void testMissingDocsFile(const std::filesystem::path& binDir) {
+    namespace fs = std::filesystem;
+    const fs::path startDir = fs::current_path();
+    fs::current_path(binDir);
+    assert(!fs::exists("data/docs.txt"));
+
+    for (const std::string name : {"searchx", "benchmark"}) {
+        const std::string exe = (fs::path(".") / name).make_preferred().string();
+        const std::string outFile = name + ".stdout.txt";
+        const std::string errFile = name + ".stderr.txt";
+        // "quit" ends searchx's prompt loop if a missing file stops being fatal.
+        const std::string command = "echo quit | " + exe + " > " + outFile + " 2> " + errFile;
+        assert(std::system(command.c_str()) != 0);
+
+        std::ifstream err(errFile);
+        std::string message;
+        std::getline(err, message);
+        err.close();
+        assert(message == "cannot open data/docs.txt");
+        fs::remove(outFile);
+        fs::remove(errFile);
+    }
+
+    fs::current_path(startDir);
+    std::cout << "  Missing docs file: OK\n";
+}
+
+int main(int, char** argv) {
     std::cout << "Running SearchX smoke tests...\n";
     testTokenizer();
     testInvertedIndex();
     testRankerAndTopK();
     testTrie();
     testLRUCache();
+    testMissingDocsFile(std::filesystem::absolute(argv[0]).parent_path());
     std::cout << "All smoke tests passed.\n";
     return 0;
 }

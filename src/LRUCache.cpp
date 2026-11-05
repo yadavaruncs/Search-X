@@ -15,6 +15,8 @@ bool LRUCache::get(const std::string& key, std::vector<ScoredDoc>& outValue) {
 }
 
 void LRUCache::put(const std::string& key, const std::vector<ScoredDoc>& value) {
+    if (capacity_ == 0) return;
+
     auto it = lookup_.find(key);
     if (it != lookup_.end()) {
         it->second->second = value;
