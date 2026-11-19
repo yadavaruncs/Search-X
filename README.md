@@ -9,6 +9,16 @@ Built as a portfolio/interview project, not a production system — see
 [Scope & trade-offs](#scope--trade-offs) for what was deliberately left out
 and why.
 
+**Stack:** C++20, STL, CMake, standard Threads library; flat-file synthetic corpus, CLI, and assert-based smoke tests.
+
+## Pipeline and operations
+
+- **Input and dataset generation:** The CLI and benchmark both read `data/docs.txt` relative to the current working directory. The loader treats each non-empty line as one document, assigns an in-memory integer ID, and exits with status 1 after writing an error to stderr if the file cannot be opened. Regenerate the sample from the repository root with `python data/generate_dataset.py`; its fixed Python random seed generates 3,000 synthetic one-line documents with vocabulary clusters chosen to make autocomplete demos useful.
+- **Index build:** On every program start, the document vector is loaded and the inverted index is rebuilt in memory. The builder clears its existing document/index state, partitions documents into contiguous slices, launches independent partial-index builds with `std::async`, and merges their posting maps sequentially after each future completes. Workers do not share a mutable index, so there is no lock around the parallel tokenization/build phase. The CLI also builds a single-threaded index for a side-by-side timing display, then uses the available hardware concurrency (minimum two workers) for the working index.
+- **Query path and cache:** A query is tokenized, scored from the term postings with TF-IDF, and reduced to the requested top five with the bounded top-K selector. Exact query strings are keys in a capacity-100 in-process LRU cache; hits reuse the already-ranked result vector and update hit/miss counters shown by `stats`. Prefix commands use the in-memory Trie. The cache and index disappear when the process exits; there is no persisted index, cross-process cache, or online telemetry backend.
+- **Failure handling and tests:** The missing-file path is fatal by design (the CLI cannot search without its corpus). The assert-based `smoke_test` exercises tokenization, multithreaded index construction, posting lists, ranking/top-K, Trie prefix results, LRU eviction, and the missing-file behavior of both executables. CMake links the platform Threads library and builds the CLI, benchmark, and smoke-test executables. The smoke test is run directly as an executable; the current CMake file does not register it as a CTest test.
+- **Benchmark/reproducibility:** `benchmark` runs eight fixed query terms 20 times each and prints timings and speedup ratios to stdout. It compares a linear scan, postings lookup alone, full TF-IDF plus top-K, and repeated queries through the LRU cache. The measurement uses the corpus present at run time; regenerate it with the fixed-seed script before comparing results. No machine-independent performance guarantee is implied.
+
 ## Architecture
 
 ```mermaid
